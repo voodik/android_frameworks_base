@@ -53,6 +53,7 @@ import android.annotation.TestApi;
 import android.app.KeyguardManager;
 import android.app.Presentation;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
@@ -420,6 +421,26 @@ public interface WindowManager extends ViewManager {
     @SystemApi
     @RequiresPermission(android.Manifest.permission.RESTRICTED_VR_ACCESS)
     public Region getCurrentImeTouchRegion();
+
+    /**
+     * Set the shortcut application to map function key and application.
+     *
+     * @param Keycode The function key between F7 ~ F10
+     * @param intent Action Intent for application.
+     *
+     * @hide
+     */
+    public void setApplicationShortcut(int KeyCode, Intent intent);
+
+    /**
+     * Return Application package name that mapped to Keycode.
+     *
+     * @param KeyCode want to know mapped application.
+     * @return The application package name that mapped to received keycode.
+     *
+     * @hide
+     */
+    public String getApplicationOfShortcutAt(int KeyCode);
 
     public static class LayoutParams extends ViewGroup.LayoutParams implements Parcelable {
         /**
