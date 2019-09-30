@@ -663,6 +663,18 @@ public class NavigationBarFragment extends LifecycleFragment implements Callback
         homeButton.setOnTouchListener(this::onHomeTouch);
         homeButton.setOnLongClickListener(this::onHomeLongClick);
 
+        ButtonDispatcher volupButton = mNavigationBarView.getVolupButton();
+        volupButton.setOnTouchListener(this::onVolupTouch);
+        volupButton.setLongClickable(false);
+
+        ButtonDispatcher voldownButton = mNavigationBarView.getVoldownButton();
+        voldownButton.setOnTouchListener(this::onVoldownTouch);
+        voldownButton.setLongClickable(false);
+
+        ButtonDispatcher powerButton = mNavigationBarView.getPowerButton();
+        powerButton.setOnTouchListener(this::onPowerTouch);
+        powerButton.setLongClickable(false);
+
         ButtonDispatcher accessibilityButton = mNavigationBarView.getAccessibilityButton();
         accessibilityButton.setOnClickListener(this::onAccessibilityClick);
         accessibilityButton.setOnLongClickListener(this::onAccessibilityLongClick);
@@ -730,6 +742,49 @@ public class NavigationBarFragment extends LifecycleFragment implements Callback
         }
         return true;
     }
+
+    private boolean onVolupTouch(View v, MotionEvent event) {
+        int action = event.getAction() & MotionEvent.ACTION_MASK;
+        if (action == MotionEvent.ACTION_DOWN) {
+//            mCommandQueue.preloadRecentApps();
+        } else if (action == MotionEvent.ACTION_CANCEL) {
+//            mCommandQueue.cancelPreloadRecentApps();
+        } else if (action == MotionEvent.ACTION_UP) {
+            if (!v.isPressed()) {
+//                mCommandQueue.cancelPreloadRecentApps();
+            }
+        }
+        return false;
+    }
+
+    private boolean onVoldownTouch(View v, MotionEvent event) {
+        int action = event.getAction() & MotionEvent.ACTION_MASK;
+        if (action == MotionEvent.ACTION_DOWN) {
+//            mCommandQueue.preloadRecentApps();
+        } else if (action == MotionEvent.ACTION_CANCEL) {
+//            mCommandQueue.cancelPreloadRecentApps();
+        } else if (action == MotionEvent.ACTION_UP) {
+            if (!v.isPressed()) {
+//                mCommandQueue.cancelPreloadRecentApps();
+            }
+        }
+        return false;
+    }
+
+    private boolean onPowerTouch(View v, MotionEvent event) {
+        int action = event.getAction() & MotionEvent.ACTION_MASK;
+        if (action == MotionEvent.ACTION_DOWN) {
+//            mCommandQueue.preloadRecentApps();
+        } else if (action == MotionEvent.ACTION_CANCEL) {
+//            mCommandQueue.cancelPreloadRecentApps();
+        } else if (action == MotionEvent.ACTION_UP) {
+            if (!v.isPressed()) {
+//                mCommandQueue.cancelPreloadRecentApps();
+            }
+        }
+        return false;
+    }
+
 
     // additional optimization when we have software system buttons - start loading the recent
     // tasks on touch down

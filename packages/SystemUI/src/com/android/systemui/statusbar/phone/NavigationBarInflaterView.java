@@ -62,6 +62,9 @@ public class NavigationBarInflaterView extends FrameLayout
     public static final String LEFT = "left";
     public static final String RIGHT = "right";
     public static final String CONTEXTUAL = "contextual";
+    public static final String VOL_UP = "volup";
+    public static final String VOL_DOWN = "voldown";
+    public static final String POWER = "power";
     public static final String IME_SWITCHER = "ime_switcher";
 
     public static final String GRAVITY_SEPARATOR = ";";
@@ -386,6 +389,12 @@ public class NavigationBarInflaterView extends FrameLayout
             v = inflater.inflate(R.layout.menu_ime, parent, false);
         } else if (NAVSPACE.equals(button)) {
             v = inflater.inflate(R.layout.nav_key_space, parent, false);
+        } else if (VOL_UP.equals(button)) {
+            v = inflater.inflate(R.layout.volume_up, parent, false);
+        } else if (VOL_DOWN.equals(button)) {
+            v = inflater.inflate(R.layout.volume_down, parent, false);
+        } else if (POWER.equals(button)) {
+            v = inflater.inflate(R.layout.power, parent, false);
         } else if (CLIPBOARD.equals(button)) {
             v = inflater.inflate(R.layout.clipboard, parent, false);
         } else if (CONTEXTUAL.equals(button)) {
