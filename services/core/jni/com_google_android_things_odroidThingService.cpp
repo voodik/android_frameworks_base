@@ -30,6 +30,12 @@
 #include <map>
 #include <dlfcn.h>
 
+#if defined(__LP64__)
+#define THINGS_PATH "/system/lib64/hw/odroidThings.so"
+#else
+#define THINGS_PATH "/system/lib/hw/odroidThings.so"
+#endif
+
 namespace android {
 things_module_t* thingsModule;
 things_device_t* thingsDevice;
@@ -39,7 +45,7 @@ static std::vector<pin_t> pinList;
 static void init(JNIEnv *env, jobject obj) {
     if (!thingsModule) {
         // TODO: Apply hw_get_module
-        void *handle = dlopen("/system/lib/hw/odroidThings.so", RTLD_NOW);
+        void *handle = dlopen(THINGS_PATH, RTLD_NOW);
         if ( handle == NULL) {
             ALOGE("module load err");
         }
