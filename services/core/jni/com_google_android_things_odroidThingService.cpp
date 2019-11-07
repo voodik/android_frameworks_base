@@ -21,15 +21,15 @@
 #include <nativehelper/JNIHelp.h>
 
 #include <hardware/hardware.h>
-#include <hardware/odroidThings.h>
 
 #include <utils/Log.h>
 #include "core_jni_helpers.h"
 
 #include <vector>
 #include <map>
-#include <dlfcn.h>
 
+#include <vendor/hardkernel/hardware/odroidthings/1.0/IOdroidThings.h>
+#include <vendor/hardkernel/hardware/odroidthings/1.0/IOdroidThingsGpioCallback.h>
 #if defined(__LP64__)
 #define THINGS_PATH "/system/lib64/hw/odroidThings.so"
 #else
@@ -37,27 +37,43 @@
 #endif
 
 namespace android {
-things_module_t* thingsModule;
-things_device_t* thingsDevice;
 
-static std::vector<pin_t> pinList;
+using android::sp;
+
+using android::hardware::Return;
+using android::hardware::Void;
+
+using IOdroidThings = vendor::hardkernel::hardware::odroidthings::V1_0::IOdroidThings;
+using IOdroidThingsGpioCallback = vendor::hardkernel::hardware::odroidthings::V1_0::IOdroidThingsGpioCallback;
+using direction_t = vendor::hardkernel::hardware::odroidthings::V1_0::Direction;
+
+class OdroidThingHal {
+private:
+    static sp<IOdroidThings> sOdroidThings;
+
+    OdroidThingHal() {}
+
+public:
+    static void disassociate() {
+        sOdroidThings = nullptr;
+    }
+
+    static sp<IOdroidThings> associate() {
+        if (sOdroidThings == nullptr) {
+            sOdroidThings = IOdroidThings::getService();
+
+            if (sOdroidThings == nullptr) {
+                ALOGE("Unable to get IOdroidThings interface.");
+            }
+        }
+        return sOdroidThings;
+    }
+};
+
+sp<IOdroidThings> OdroidThingHal::sOdroidThings = nullptr;
 
 static void init(JNIEnv *env, jobject obj) {
-    if (!thingsModule) {
-        // TODO: Apply hw_get_module
-        void *handle = dlopen(THINGS_PATH, RTLD_NOW);
-        if ( handle == NULL) {
-            ALOGE("module load err");
-        }
-        const char *sym = HAL_MODULE_INFO_SYM_AS_STR;
-        thingsModule = (things_module_t*) dlsym(handle, sym);
-    }
-    if (thingsModule) {
-        thingsModule->init();
-        thingsModule->common.methods->open((const hw_module_t *) thingsModule, NULL,
-                (struct hw_device_t **)&thingsDevice);
-        pinList = thingsModule->getPinList();
-    }
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
 }
 
 static jobject getPinName(JNIEnv *env, jobject obj) {
@@ -67,48 +83,72 @@ static jobject getPinName(JNIEnv *env, jobject obj) {
     jmethodID mAdd = env->GetMethodID(clsArrayList, "add", "(Ljava/lang/Object;)Z");
     jobject resultArray = env->NewObject(clsArrayList, mCreator);
 
-    for (pin_t pin: pinList) {
-        jstring pinName = env->NewStringUTF(pin.name.c_str());
-        env->CallBooleanMethod(resultArray, mAdd, pinName);
-        env->DeleteLocalRef(pinName);
-    }
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+
+    hal->getPinNameList(
+            [&](const auto &pinNameList) {
+            const size_t count = pinNameList.size();
+            for (size_t i=0; i<count; i++) {
+            std::string pin = pinNameList[i];
+            jstring pinName = env->NewStringUTF(pin.c_str());
+            env->CallBooleanMethod(resultArray, mAdd, pinName);
+            env->DeleteLocalRef(pinName);
+            }
+            });
 
     return resultArray;
 }
 
-static jintArray getAvailables(JNIEnv *env, jobject obj) {
-    jintArray intArray = env->NewIntArray(PIN_MAX);
-    jint *element = env->GetIntArrayElements(intArray, nullptr);
-    int i=0;
-    for (pin_t pin: pinList) {
-        element[i] = pin.availableModes;
-        i++;
-    }
-    env->ReleaseIntArrayElements(intArray, element, 0);
+static jobject getListOf(JNIEnv *env, jobject obj, jint mode) {
 
-    return intArray;
+    jclass clsArrayList = env->FindClass("java/util/ArrayList");
+    jmethodID mCreator = env->GetMethodID(clsArrayList, "<init>", "()V");
+    jmethodID mAdd = env->GetMethodID(clsArrayList, "add", "(Ljava/lang/Object;)Z");
+    jobject resultArray = env->NewObject(clsArrayList, mCreator);
+
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+
+    hal->getListOf(
+            mode,
+            [&](const auto &pinList) {
+            const size_t count = pinList.size();
+            for (size_t i=0; i<count; i++) {
+                std::string pin = pinList[i];
+                jstring pinName = env->NewStringUTF(pin.c_str());
+                env->CallBooleanMethod(resultArray, mAdd, pinName);
+                env->DeleteLocalRef(pinName);
+            }
+            });
+
+    return resultArray;
 }
-
 static void setGpioDirection(JNIEnv *env, jobject obj, jint pin, jint direction) {
-    thingsDevice->gpio_ops.setDirection(pin, direction);
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->setDirection(pin, (direction_t) direction);
 }
 
 static void setGpioValue(JNIEnv *env, jobject obj, jint pin, jboolean value) {
-    thingsDevice->gpio_ops.setValue(pin, (value == JNI_TRUE));
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->gpio_setValue(pin, (value == JNI_TRUE));
 }
+
 static jboolean getGpioValue(JNIEnv *env, jobject obj, jint pin) {
-    return (thingsDevice->gpio_ops.getValue(pin)? JNI_TRUE:JNI_FALSE);
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->gpio_getValue(pin);
+    return (result? JNI_TRUE: JNI_FALSE);
 }
 
 static void setGpioActiveType(JNIEnv *env, jobject obj, jint pin, jint activeType) {
-    thingsDevice->gpio_ops.setActiveType(pin, activeType);
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->gpio_setActiveType(pin, activeType);
 }
 
 static void setEdgeTriggerType(JNIEnv *env, jobject obj, jint pin, jint edgeTriggerType) {
-    thingsDevice->gpio_ops.setEdgeTriggerType(pin, edgeTriggerType);
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->gpio_setEdgeTriggerType(pin, edgeTriggerType);
 }
 
-class Callback {
+class Callback : public IOdroidThingsGpioCallback {
     private:
         JavaVM* jvm;
         JNIEnv *env;
@@ -119,7 +159,7 @@ class Callback {
         Callback();
         ~Callback();
         Callback(JNIEnv*, int);
-        void doCallback();
+        Return<void> doCallback() override;
 };
 
 Callback::Callback() {
@@ -141,93 +181,50 @@ Callback::Callback(JNIEnv *env, int pin) {
     cb = (*env).GetStaticMethodID(thingsManagerClass, "doCallback", "(I)V");
 }
 
-void Callback::doCallback() {
+Return<void> Callback::doCallback() {
     (*jvm).AttachCurrentThread(&env, NULL);
     (*env).CallStaticVoidMethod(thingsManagerClass, cb, pin);
+
+    return Void();
 }
 
-std::map<int, Callback> callbackList;
-// TODO: Replace it to class!
-static void callback0() {callbackList[0].doCallback();}
-static void callback1() {callbackList[1].doCallback();}
-static void callback2() {callbackList[2].doCallback();}
-static void callback3() {callbackList[3].doCallback();}
-static void callback4() {callbackList[4].doCallback();}
-static void callback5() {callbackList[5].doCallback();}
-static void callback6() {callbackList[6].doCallback();}
-static void callback7() {callbackList[7].doCallback();}
-static void callback8() {callbackList[8].doCallback();}
-static void callback9() {callbackList[9].doCallback();}
-static void callback10() {callbackList[10].doCallback();}
-static void callback11() {callbackList[11].doCallback();}
-static void callback12() {callbackList[12].doCallback();}
-static void callback13() {callbackList[13].doCallback();}
-static void callback14() {callbackList[14].doCallback();}
-static void callback15() {callbackList[15].doCallback();}
-static void callback16() {callbackList[16].doCallback();}
-static void callback17() {callbackList[17].doCallback();}
-static void callback18() {callbackList[18].doCallback();}
-static void callback19() {callbackList[19].doCallback();}
-static void callback20() {callbackList[20].doCallback();}
-static void callback21() {callbackList[21].doCallback();}
-static void callback22() {callbackList[22].doCallback();}
-static void callback23() {callbackList[23].doCallback();}
-static void callback24() {callbackList[24].doCallback();}
-static void callback25() {callbackList[25].doCallback();}
-static void callback26() {callbackList[26].doCallback();}
-static void callback27() {callbackList[27].doCallback();}
-static void callback28() {callbackList[28].doCallback();}
-static void callback29() {callbackList[29].doCallback();}
-static void callback30() {callbackList[30].doCallback();}
-static void callback31() {callbackList[31].doCallback();}
-
 static void registerCallback(JNIEnv *env, jobject obj, jint pin) {
-    callbackList.insert(std::pair<int, Callback>(pin,Callback(env, pin)));
-    function_t callback;
-    switch (pin) {
-        case 0: callback = &callback0; break;
-        case 1: callback = &callback1; break;
-        case 2: callback = &callback2; break;
-        case 3: callback = &callback3; break;
-        case 4: callback = &callback4; break;
-        case 5: callback = &callback5; break;
-        case 6: callback = &callback6; break;
-        case 7: callback = &callback7; break;
-        case 8: callback = &callback8; break;
-        case 9: callback = &callback9; break;
-        case 10: callback = &callback10; break;
-        case 11: callback = &callback11; break;
-        case 12: callback = &callback12; break;
-        case 13: callback = &callback13; break;
-        case 14: callback = &callback14; break;
-        case 15: callback = &callback15; break;
-        case 16: callback = &callback16; break;
-        case 17: callback = &callback17; break;
-        case 18: callback = &callback18; break;
-        case 19: callback = &callback19; break;
-        case 20: callback = &callback20; break;
-        case 21: callback = &callback21; break;
-        case 22: callback = &callback22; break;
-        case 23: callback = &callback23; break;
-        case 24: callback = &callback24; break;
-        case 25: callback = &callback25; break;
-        case 26: callback = &callback26; break;
-        case 27: callback = &callback27; break;
-        case 28: callback = &callback28; break;
-        case 29: callback = &callback29; break;
-        case 30: callback = &callback30; break;
-        case 31: callback = &callback31; break;
-    }
-    thingsDevice->gpio_ops.registerCallback(pin, callback);
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    sp<IOdroidThingsGpioCallback> callback = new Callback(env, pin);
+    hal->gpio_registerCallback(pin, callback);
 }
 
 static void unregisterCallback(JNIEnv *env, jobject obj, jint pin) {
-    std::map<int, Callback>::iterator it;
-    it = callbackList.find(pin);
-    if (it != callbackList.end()) {
-        thingsDevice->gpio_ops.unregisterCallback(pin);
-        callbackList.erase(it);
-    }
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->gpio_unregisterCallback(pin);
+}
+
+static void openPwm(JNIEnv *env, jobject obj, jint pin) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->pwm_open(pin);
+}
+
+static void closePwm(JNIEnv *env, jobject obj, jint pin) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->pwm_close(pin);
+}
+
+static jboolean setPwmEnable(JNIEnv *env, jobject obj, jint pin, jboolean enabled) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->pwm_setEnable(pin, (enabled == JNI_TRUE));
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setDutyCycle(JNIEnv *env, jobject obj, jint pin, jdouble cycle_rate) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->pwm_setDutyCycle(pin, cycle_rate);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setFrequency(JNIEnv *env, jobject obj, jint pin, jdouble frequency_hz) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->pwm_setFrequency(pin, frequency_hz);
+    return (result? JNI_TRUE:JNI_FALSE);
 }
 
 static const JNINativeMethod sManagerMethods[] = {
@@ -238,9 +235,9 @@ static const JNINativeMethod sManagerMethods[] = {
     {"_getPinName",
         "()Ljava/util/ArrayList;",
         reinterpret_cast<void*>(getPinName)},
-    {"_getPinAvailables",
-        "()[I",
-        reinterpret_cast<void*>(getAvailables)},
+    {"_getListOf",
+        "(I)Ljava/util/ArrayList;",
+        reinterpret_cast<void*>(getListOf)},
 };
 
 static const JNINativeMethod sGpioMethods[] = {
@@ -267,6 +264,25 @@ static const JNINativeMethod sGpioMethods[] = {
         reinterpret_cast<void *>(unregisterCallback)},
 
 };
+
+static const JNINativeMethod sPwmMethods[] = {
+    {"_openPwm",
+        "(I)V",
+        reinterpret_cast<void *>(openPwm)},
+    {"_closePwm",
+        "(I)V",
+        reinterpret_cast<void *>(closePwm)},
+    {"_setPwmEnabled",
+        "(IZ)Z",
+        reinterpret_cast<void *>(setPwmEnable)},
+    {"_setDutyCycle",
+        "(ID)Z",
+        reinterpret_cast<void *>(setDutyCycle)},
+    {"_setFrequency",
+        "(ID)Z",
+        reinterpret_cast<void *>(setFrequency)},
+};
+
 int register_google_android_things_odroid(JNIEnv* env) {
     ALOGD("load odroid things server jni ");
     jniRegisterNativeMethods(
@@ -274,10 +290,15 @@ int register_google_android_things_odroid(JNIEnv* env) {
             "com/google/android/things/odroid/OdroidThingsManager",
             sManagerMethods,
             NELEM(sManagerMethods));
-    return jniRegisterNativeMethods(
+    jniRegisterNativeMethods(
             env,
             "com/google/android/things/odroid/OdroidGpio",
             sGpioMethods,
             NELEM(sGpioMethods));
+    return jniRegisterNativeMethods(
+            env,
+            "com/google/android/things/odroid/OdroidPwm",
+            sPwmMethods,
+            NELEM(sPwmMethods));
 }
 } // namespace android

@@ -132,6 +132,7 @@ cc_defaults {
         "android.frameworks.schedulerservice@1.0",
         "android.frameworks.sensorservice@1.0",
         "vendor.lineage.power@1.0",
+        "vendor.hardkernel.hardware.odroidthings@1.0",
     ],
 
     static_libs: [
