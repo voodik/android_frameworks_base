@@ -42,10 +42,12 @@ using android::sp;
 
 using android::hardware::Return;
 using android::hardware::Void;
+using android::hardware::hidl_vec;
 
 using IOdroidThings = vendor::hardkernel::hardware::odroidthings::V1_0::IOdroidThings;
 using IOdroidThingsGpioCallback = vendor::hardkernel::hardware::odroidthings::V1_0::IOdroidThingsGpioCallback;
 using direction_t = vendor::hardkernel::hardware::odroidthings::V1_0::Direction;
+using vendor::hardkernel::hardware::odroidthings::V1_0::Result;
 
 class OdroidThingHal {
 private:
@@ -227,6 +229,57 @@ static jboolean setFrequency(JNIEnv *env, jobject obj, jint pin, jdouble frequen
     return (result? JNI_TRUE:JNI_FALSE);
 }
 
+static void openI2c(JNIEnv *env, jobject obj, jint nameIdx, jint address, jint idx) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->i2c_open(nameIdx, address, idx);
+}
+
+static void closeI2c(JNIEnv *env, jobject obj, jint idx) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->i2c_close(idx);
+}
+
+static jbyteArray readI2cRegBuffer(JNIEnv *env, jobject obj, jint idx, jint reg, jint length) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hidl_vec<uint8_t> buffer;
+    uint8_t *retBuffer = NULL;
+    jbyteArray result;
+
+    Return<void> ret = hal->i2c_readRegBuffer(idx, reg, length,
+        [&] (Result ret, hidl_vec<uint8_t> result) {
+            if (ret == Result::OK) buffer = result;
+        });
+
+    if (ret.isOk()) {
+        retBuffer = new uint8_t[length];
+        for (int i=0; i<length; i++)
+            retBuffer[i] = buffer[i];
+
+        result = env->NewByteArray(length);
+        env->SetByteArrayRegion(result, 0, length, (jbyte *)retBuffer);
+        delete[] retBuffer;
+    } else {
+        result = env->NewByteArray(0);
+    }
+
+    return result;
+}
+
+static jboolean writeI2cRegBuffer(JNIEnv *env, jobject obj, jint idx, jint reg, jbyteArray buffer, jint length) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    Result ret;
+    hidl_vec<uint8_t> writeBuffer(length);
+
+    uint8_t *data = (uint8_t *)env->GetByteArrayElements(buffer, NULL);
+    for(int i=0; i<length; i++)
+        writeBuffer[i] = data[i];
+    env->ReleaseByteArrayElements(buffer, (jbyte *)data, JNI_ABORT);
+
+    ret = hal->i2c_writeRegBuffer(idx, reg, writeBuffer, length);
+
+    return (ret == Result::OK)?JNI_TRUE:JNI_FALSE;
+}
+
 static const JNINativeMethod sManagerMethods[] = {
     /* name, signature, funcPtr */
     {"_init",
@@ -283,6 +336,21 @@ static const JNINativeMethod sPwmMethods[] = {
         reinterpret_cast<void *>(setFrequency)},
 };
 
+static const JNINativeMethod sI2cMethods[] = {
+    {"_open",
+        "(III)V",
+        reinterpret_cast<void *>(openI2c)},
+    {"_close",
+        "(I)V",
+        reinterpret_cast<void *>(closeI2c)},
+    {"_readRegBuffer",
+        "(III)[B",
+        reinterpret_cast<void *>(readI2cRegBuffer)},
+    {"_writeRegBuffer",
+        "(II[BI)Z",
+        reinterpret_cast<void *>(writeI2cRegBuffer)},
+};
+
 int register_google_android_things_odroid(JNIEnv* env) {
     ALOGD("load odroid things server jni ");
     jniRegisterNativeMethods(
@@ -295,10 +363,15 @@ int register_google_android_things_odroid(JNIEnv* env) {
             "com/google/android/things/odroid/OdroidGpio",
             sGpioMethods,
             NELEM(sGpioMethods));
-    return jniRegisterNativeMethods(
+    jniRegisterNativeMethods(
             env,
             "com/google/android/things/odroid/OdroidPwm",
             sPwmMethods,
             NELEM(sPwmMethods));
+    return jniRegisterNativeMethods(
+            env,
+            "com/google/android/things/odroid/OdroidI2c",
+            sI2cMethods,
+            NELEM(sI2cMethods));
 }
 } // namespace android
