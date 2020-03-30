@@ -158,6 +158,7 @@ import com.android.server.webkit.WebViewUpdateService;
 import com.android.server.wm.ActivityTaskManagerService;
 import com.android.server.wm.WindowManagerGlobalLock;
 import com.android.server.wm.WindowManagerService;
+import com.google.android.things.odroid.OdroidThingsManager;
 
 import dalvik.system.VMRuntime;
 
@@ -2300,6 +2301,10 @@ public final class SystemServer {
             } catch (Throwable e) {
                 reportWtf("Notifying incident daemon running", e);
             }
+            traceEnd();
+
+            traceBeginAndSlog("ThingsManagerReady");
+            ServiceManager.addService("things", new OdroidThingsManager());
             traceEnd();
         }, BOOT_TIMINGS_TRACE_LOG);
     }
