@@ -280,6 +280,103 @@ static jboolean writeI2cRegBuffer(JNIEnv *env, jobject obj, jint idx, jint reg, 
     return (ret == Result::OK)?JNI_TRUE:JNI_FALSE;
 }
 
+static void openUart(JNIEnv *env, jobject obj, jint idx) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->uart_open(idx);
+}
+
+static void closeUart(JNIEnv *env, jobject obj, jint idx) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->uart_close(idx);
+}
+
+static jboolean flush(JNIEnv *env, jobject obj, jint idx, jint direction) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->uart_flush(idx, direction);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean sendBreak(JNIEnv *env, jobject obj, jint idx, jint duration) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->uart_sendBreak(idx, duration);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setBaudrate(JNIEnv *env, jobject obj, jint idx, jint rate) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->uart_setBaudrate(idx, rate);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setDataSize(JNIEnv *env, jobject obj, jint idx, jint size) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->uart_setDataSize(idx, size);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setHardwareFlowControl(JNIEnv *env, jobject obj, jint idx, jint mode) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->uart_setHardwareFlowControl(idx, mode);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setParity(JNIEnv *env, jobject obj, jint idx, jint mode) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->uart_setParity(idx, mode);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setStopBits(JNIEnv *env, jobject obj, jint idx, jint bits) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->uart_setStopBits(idx, bits);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jbyteArray readUart(JNIEnv *env, jobject obj, jint idx, jint length) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hidl_vec<uint8_t> buffer;
+    uint8_t *retBuffer = NULL;
+    jbyteArray retArray;
+    int32_t retLength;
+
+    hal->uart_read(idx, length,
+            [&] (int32_t len, hidl_vec<uint8_t> result) {
+                retLength = len;
+                if (len > 0)
+                    buffer = result;
+                });
+
+    if (retLength > 0) {
+        retBuffer = new uint8_t[retLength];
+        for (int i=0; i < retLength; i++)
+            retBuffer[i] = buffer[i];
+
+        retArray = env->NewByteArray(retLength);
+        env->SetByteArrayRegion(retArray, 0, retLength, (jbyte *)retBuffer);
+        delete[] retBuffer;
+    } else {
+        retArray = env->NewByteArray(0);
+    }
+
+    return retArray;
+}
+
+static jint writeUart(JNIEnv *env, jobject obj, jint idx, jbyteArray buffer, jint length) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    jint ret;
+    hidl_vec<uint8_t> writeBuffer(length);
+
+    uint8_t *data = (uint8_t *)env->GetByteArrayElements(buffer, NULL);
+    for(int i=0; i<length; i++)
+        writeBuffer[i] = data[i];
+    env->ReleaseByteArrayElements(buffer, (jbyte *)data, JNI_ABORT);
+
+    ret = hal->uart_write(idx, writeBuffer, length);
+
+    return ret;
+
+}
+
 static const JNINativeMethod sManagerMethods[] = {
     /* name, signature, funcPtr */
     {"_init",
@@ -351,6 +448,42 @@ static const JNINativeMethod sI2cMethods[] = {
         reinterpret_cast<void *>(writeI2cRegBuffer)},
 };
 
+static const JNINativeMethod sUartMethods[] = {
+    {"_open",
+        "(I)V",
+        reinterpret_cast<void *>(openUart)},
+    {"_close",
+        "(I)V",
+        reinterpret_cast<void *>(closeUart)},
+    {"_flush",
+        "(II)Z",
+        reinterpret_cast<void *>(flush)},
+    {"_sendBreak",
+        "(II)Z",
+        reinterpret_cast<void *>(sendBreak)},
+    {"_setBaudrate",
+        "(II)Z",
+        reinterpret_cast<void *>(setBaudrate)},
+    {"_setDataSize",
+        "(II)Z",
+        reinterpret_cast<void *>(setDataSize)},
+    {"_setHardwareFlowControl",
+        "(II)Z",
+        reinterpret_cast<void *>(setHardwareFlowControl)},
+    {"_setParity",
+        "(II)Z",
+        reinterpret_cast<void *>(setParity)},
+    {"_setStopBits",
+        "(II)Z",
+        reinterpret_cast<void *>(setStopBits)},
+    {"_read",
+        "(II)[B",
+        reinterpret_cast<void *>(readUart)},
+    {"_write",
+        "(I[BI)I",
+        reinterpret_cast<void *>(writeUart)},
+};
+
 int register_google_android_things_odroid(JNIEnv* env) {
     ALOGD("load odroid things server jni ");
     jniRegisterNativeMethods(
@@ -368,10 +501,15 @@ int register_google_android_things_odroid(JNIEnv* env) {
             "com/google/android/things/odroid/OdroidPwm",
             sPwmMethods,
             NELEM(sPwmMethods));
-    return jniRegisterNativeMethods(
+    jniRegisterNativeMethods(
             env,
             "com/google/android/things/odroid/OdroidI2c",
             sI2cMethods,
             NELEM(sI2cMethods));
+    return jniRegisterNativeMethods(
+            env,
+            "com/google/android/things/odroid/OdroidUart",
+            sUartMethods,
+            NELEM(sUartMethods));
 }
 } // namespace android
