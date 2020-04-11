@@ -108,7 +108,7 @@ public class BatteryMeterView extends LinearLayout implements
     private boolean mIsSubscribedForTunerUpdates;
     private boolean mCharging;
 
-    private boolean mBatteryHidden;
+    private boolean mBatteryHidden = true;
     private int mBatteryStyle = BATTERY_STYLE_PORTRAIT;
 
     private DualToneHandler mDualToneHandler;
@@ -298,7 +298,7 @@ public class BatteryMeterView extends LinearLayout implements
     public void onTuningChanged(String key, String newValue) {
         if (StatusBarIconController.ICON_BLACKLIST.equals(key)) {
             ArraySet<String> icons = StatusBarIconController.getIconBlacklist(newValue);
-            mBatteryHidden = icons.contains(mSlotBattery);
+//            mBatteryHidden = icons.contains(mSlotBattery);
             setVisibility(mBatteryHidden ? View.GONE : View.VISIBLE);
         } else if (STATUS_BAR_BATTERY_STYLE.equals(key) && newValue != null) {
             mBatteryStyle = Integer.parseInt(newValue);
