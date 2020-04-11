@@ -1390,9 +1390,9 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
                         + TimeUtils.formatDuration(locationAfterStartedFalseMillis)
                         + " after location turned off";
                 if (locationAfterStartedFalseMillis > LOCATION_OFF_DELAY_THRESHOLD_ERROR_MILLIS) {
-                    Log.e(TAG, logMessage);
+                    Log.d(TAG, logMessage);
                 } else {
-                    Log.w(TAG, logMessage);
+                    Log.d(TAG, logMessage);
                 }
             }
         }
