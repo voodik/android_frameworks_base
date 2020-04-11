@@ -529,7 +529,7 @@ public class AudioService extends IAudioService.Stub
     private volatile IRingtonePlayer mRingtonePlayer;
 
     // Devices for which the volume is fixed (volume is either max or muted)
-    int mFixedVolumeDevices = AudioSystem.DEVICE_OUT_HDMI |
+    int mFixedVolumeDevices = //AudioSystem.DEVICE_OUT_HDMI |
             AudioSystem.DEVICE_OUT_DGTL_DOCK_HEADSET |
             AudioSystem.DEVICE_OUT_HDMI_ARC |
             AudioSystem.DEVICE_OUT_SPDIF |
@@ -897,8 +897,8 @@ public class AudioService extends IAudioService.Stub
                 mHdmiPlaybackClient = mHdmiManager.getPlaybackClient();
                 if (mHdmiPlaybackClient != null) {
                     // not a television: HDMI output will be always at max
-                    mFixedVolumeDevices &= ~AudioSystem.DEVICE_OUT_HDMI;
-                    mFullVolumeDevices |= AudioSystem.DEVICE_OUT_HDMI;
+//                    mFixedVolumeDevices &= ~AudioSystem.DEVICE_OUT_HDMI;
+//                    mFullVolumeDevices |= AudioSystem.DEVICE_OUT_HDMI;
                 }
                 mHdmiCecSink = false;
                 mHdmiAudioSystemClient = mHdmiManager.getAudioSystemClient();
@@ -6238,6 +6238,7 @@ public class AudioService extends IAudioService.Stub
                         // HDMI output
                         mFullVolumeDevices &= ~AudioSystem.DEVICE_OUT_HDMI;
                     }
+                    mFullVolumeDevices &= ~AudioSystem.DEVICE_OUT_HDMI;
                     checkAddAllFixedVolumeDevices(AudioSystem.DEVICE_OUT_HDMI,
                             "HdmiPlaybackClient.DisplayStatusCallback");
                 }
