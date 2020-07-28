@@ -377,6 +377,125 @@ static jint writeUart(JNIEnv *env, jobject obj, jint idx, jbyteArray buffer, jin
 
 }
 
+static void openSpi(JNIEnv *env, jobject obj, jint idx) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->spi_open(idx);
+}
+
+static void closeSpi(JNIEnv *env, jobject obj, jint idx) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->spi_close(idx);
+}
+
+static jboolean setBitJustification(JNIEnv* env, jobject obj, jint idx, jint justification) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->spi_setBitJustification(idx, justification);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setBitsPerWord(JNIEnv* env, jobject obj, jint idx, jint bits) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->spi_setBitsPerWord(idx, bits);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setMode(JNIEnv* env, jobject obj, jint idx, jint mode) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->spi_setMode(idx, mode);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setCsChange(JNIEnv *env, jobject obj, jint idx, jboolean cs) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->spi_setCsChange(idx, (cs == JNI_TRUE));
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setDelay(JNIEnv *env, jobject obj, jint idx, jint delay) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->spi_setDelay(idx, delay);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jboolean setFrequencySpi(JNIEnv *env, jobject obj, jint idx, jint frequency) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    bool result = hal->spi_setFrequency(idx, frequency);
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
+static jbyteArray readSpi(JNIEnv *env, jobject obj, jint idx, jint length) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hidl_vec<uint8_t> rxBuffer;
+    uint8_t *retBuffer = NULL;
+    jbyteArray retArray;
+
+    Return<void> ret = hal->spi_read(idx, length,
+            [&] (int32_t len, hidl_vec<uint8_t> result) {
+                rxBuffer = result;
+            });
+
+    if (ret.isOk()) {
+        retBuffer = new uint8_t[length];
+        for (int i=0; i < length; i++)
+            retBuffer[i] = rxBuffer[i];
+
+        retArray = env->NewByteArray(length);
+        env->SetByteArrayRegion(retArray, 0, length, (jbyte*) retBuffer);
+        delete[] retBuffer;
+    } else {
+        retArray = env->NewByteArray(0);
+    }
+
+    return retArray;
+}
+
+static jbyteArray transferSpi(JNIEnv* env, jobject obj, jint idx, jbyteArray txArray, jint length) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hidl_vec<uint8_t> rxBuffer;
+    uint8_t *retBuffer = NULL;
+    jbyteArray retArray;
+
+    hidl_vec<uint8_t> txBuffer(length);
+
+    uint8_t *data = (uint8_t *)env->GetByteArrayElements(txArray, NULL);
+    for(int i=0; i<length; i++)
+        txBuffer[i] = data[i];
+    env->ReleaseByteArrayElements(txArray, (jbyte *)data, JNI_ABORT);
+
+    Return<void> ret = hal->spi_transfer(idx, txBuffer, length,
+            [&](/*Result ret*/int32_t len, hidl_vec<uint8_t> result) {
+                rxBuffer = result;
+            });
+
+    if (ret.isOk()) {
+        retBuffer = new uint8_t[length];
+        for (int i=0; i < length; i++)
+            retBuffer[i] = rxBuffer[i];
+
+        retArray = env->NewByteArray(length);
+        env->SetByteArrayRegion(retArray, 0, length, (jbyte *) retBuffer);
+        delete[] retBuffer;
+    } else {
+        retArray = env->NewByteArray(0);
+    }
+
+    return retArray;
+}
+
+static jboolean writeSpi(JNIEnv *env, jobject obj, jint idx, jbyteArray txArray, jint length) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hidl_vec<uint8_t> txBuffer(length);
+
+    uint8_t *data = (uint8_t *)env->GetByteArrayElements(txArray, NULL);
+    for (int i=0; i<length; i++)
+        txBuffer[i] = data[i];
+    env->ReleaseByteArrayElements(txArray, (jbyte *) data, JNI_ABORT);
+
+    bool result = hal->spi_write(idx, txBuffer, length);
+
+    return (result? JNI_TRUE:JNI_FALSE);
+}
+
 static const JNINativeMethod sManagerMethods[] = {
     /* name, signature, funcPtr */
     {"_init",
@@ -484,6 +603,42 @@ static const JNINativeMethod sUartMethods[] = {
         reinterpret_cast<void *>(writeUart)},
 };
 
+static const JNINativeMethod sSpiMethod[] = {
+    {"_open",
+        "(I)V",
+        reinterpret_cast<void *>(openSpi)},
+    {"_close",
+        "(I)V",
+        reinterpret_cast<void *>(closeSpi)},
+    {"_setBitJustification",
+        "(II)Z",
+        reinterpret_cast<void *>(setBitJustification)},
+    {"_setBitsPerWord",
+        "(II)Z",
+        reinterpret_cast<void *>(setBitsPerWord)},
+    {"_setMode",
+        "(II)Z",
+        reinterpret_cast<void *>(setMode)},
+    {"_setCsChange",
+        "(IZ)Z",
+        reinterpret_cast<void *>(setCsChange)},
+    {"_setDelay",
+        "(II)Z",
+        reinterpret_cast<void *>(setDelay)},
+    {"_setFrequency",
+        "(II)Z",
+        reinterpret_cast<void *>(setFrequencySpi)},
+    {"_read",
+        "(II)[B",
+        reinterpret_cast<void *>(readSpi)},
+    {"_transfer",
+        "(I[BI)[B",
+        reinterpret_cast<void *>(transferSpi)},
+    {"_write",
+        "(I[BI)Z",
+        reinterpret_cast<void *>(writeSpi)},
+};
+
 int register_google_android_things_odroid(JNIEnv* env) {
     ALOGD("load odroid things server jni ");
     jniRegisterNativeMethods(
@@ -506,10 +661,13 @@ int register_google_android_things_odroid(JNIEnv* env) {
             "com/google/android/things/odroid/OdroidI2c",
             sI2cMethods,
             NELEM(sI2cMethods));
-    return jniRegisterNativeMethods(
+    jniRegisterNativeMethods(
             env,
             "com/google/android/things/odroid/OdroidUart",
             sUartMethods,
             NELEM(sUartMethods));
+    return jniRegisterNativeMethods(env, "com/google/android/things/odroid/OdroidSpi",
+            sSpiMethod,
+            NELEM(sSpiMethod));
 }
 } // namespace android
