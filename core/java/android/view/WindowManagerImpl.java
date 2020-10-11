@@ -28,6 +28,7 @@ import android.annotation.NonNull;
 import android.app.ResourcesManager;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Insets;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -171,6 +172,26 @@ public final class WindowManagerImpl implements WindowManager {
         } catch (RemoteException e) {
         }
         return null;
+    }
+
+    @Override
+    public void setApplicationShortcut(int keyCode, Intent intent) {
+        try {
+            WindowManagerGlobal.getWindowManagerService()
+                .setApplicationShortcut(keyCode, intent);
+        } catch (RemoteException e) {
+        }
+    }
+
+    @Override
+    public String getApplicationOfShortcutAt(int keyCode) {
+        String result = null;
+        try {
+            WindowManagerGlobal.getWindowManagerService()
+                .getApplicationOfShortcutAt(keyCode);
+        } catch (RemoteException e) {
+        }
+        return result;
     }
 
     @Override

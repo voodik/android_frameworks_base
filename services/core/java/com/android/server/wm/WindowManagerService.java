@@ -278,6 +278,7 @@ import com.android.server.Watchdog;
 import com.android.server.input.InputManagerService;
 import com.android.server.policy.WindowManagerPolicy;
 import com.android.server.policy.WindowManagerPolicy.ScreenOffListener;
+import com.android.server.policy.PhoneWindowManager;
 import com.android.server.power.ShutdownThread;
 import com.android.server.protolog.ProtoLogImpl;
 import com.android.server.protolog.common.ProtoLog;
@@ -7224,6 +7225,17 @@ public class WindowManagerService extends IWindowManager.Stub
                     "Requires REGISTER_WINDOW_MANAGER_LISTENERS permission");
         }
         mPolicy.registerShortcutKey(shortcutCode, shortcutKeyReceiver);
+    }
+
+
+    @Override
+    public void setApplicationShortcut(int keyCode, Intent intent) {
+        ((PhoneWindowManager)mPolicy).setApplicationShortcut(keyCode, intent);
+    }
+
+    @Override
+    public String getApplicationOfShortcutAt(int keyCode) {
+        return ((PhoneWindowManager)mPolicy).getApplicationOfShortcutAt(keyCode);
     }
 
     private final class LocalService extends WindowManagerInternal {
