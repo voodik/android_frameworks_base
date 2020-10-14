@@ -14,6 +14,7 @@
 
 package com.android.systemui;
 
+import android.os.SystemProperties;
 import android.util.Log;
 
 import com.android.systemui.statusbar.phone.StatusBar;
@@ -48,7 +49,14 @@ public class SystemBars extends SystemUI {
 
     private void createStatusBarFromConfig() {
         if (DEBUG) Log.d(TAG, "createStatusBarFromConfig");
-        final String clsName = mContext.getString(R.string.config_statusBarComponent);
+        boolean kiosk = SystemProperties.getBoolean("persist.kiosk_mode", false);
+        final String clsName;
+        if (kiosk) {
+            clsName = "com.android.systemui.statusbar.tv.TvStatusBar";
+        } else {
+            clsName = mContext.getString(R.string.config_statusBarComponent);
+        }
+
         if (clsName == null || clsName.length() == 0) {
             throw andLog("No status bar component configured", null);
         }

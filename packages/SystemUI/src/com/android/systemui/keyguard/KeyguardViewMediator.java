@@ -720,6 +720,10 @@ public class KeyguardViewMediator extends SystemUI {
 
         // Assume keyguard is showing (unless it's disabled) until we know for sure, unless Keyguard
         // is disabled.
+        boolean kiosk = SystemProperties.getBoolean("persist.kiosk_mode", false);
+        if (kiosk) {
+            setShowingLocked(false /* showing */, true /* forceCallbacks */);
+        } else {
         if (mContext.getResources().getBoolean(R.bool.config_enableKeyguardService)) {
             setShowingLocked(!shouldWaitForProvisioning()
                     && !mLockPatternUtils.isLockScreenDisabled(
@@ -727,6 +731,7 @@ public class KeyguardViewMediator extends SystemUI {
         } else {
             // The system's keyguard is disabled or missing.
             setShowingLocked(false /* showing */, true /* forceCallbacks */);
+            }
         }
 
         mStatusBarKeyguardViewManager =
@@ -1902,9 +1907,11 @@ public class KeyguardViewMediator extends SystemUI {
             if (mShowing && !mOccluded) {
                 mKeyguardGoingAwayRunnable.run();
             } else {
+                if (!SystemProperties.getBoolean("persist.kiosk_mode", false)){
                 handleStartKeyguardExitAnimation(
                         SystemClock.uptimeMillis() + mHideAnimation.getStartOffset(),
                         mHideAnimation.getDuration());
+                }
             }
         }
         Trace.endSection();
