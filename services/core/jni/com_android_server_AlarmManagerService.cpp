@@ -274,7 +274,13 @@ static bool rtc_is_hctosys(unsigned int rtc_id)
     else
         ret = hctosys;
 
+    ALOGI("rtc_is_hctosys hctosys is %u err is %d", hctosys, err);
+
     fclose(file);
+
+    if (hctosys == 0 && err > 0)
+        return true;
+
     return ret;
 }
 
