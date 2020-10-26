@@ -40,6 +40,7 @@ import android.hardware.usb.UsbConstants;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.service.usb.UsbAccessoryAttachedActivities;
 import android.service.usb.UsbDeviceAttachedActivities;
@@ -166,10 +167,19 @@ class UsbUserSettingsManager {
             }
         }
 
+        if (SystemProperties.getBoolean("persist.disable_usb_perms", false)) {
+            return true;
+        }
+
         return mUsbPermissionManager.hasPermission(device, uid);
     }
 
     public boolean hasPermission(UsbAccessory accessory, int uid) {
+
+        if (SystemProperties.getBoolean("persist.disable_usb_perms", false)) {
+            return true;
+        }
+
         return mUsbPermissionManager.hasPermission(accessory, uid);
     }
 
