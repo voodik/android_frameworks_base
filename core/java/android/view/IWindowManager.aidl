@@ -779,4 +779,9 @@ interface IWindowManager
      */
     void setApplicationShortcut(int keyCode, in Intent intent);
     String getApplicationOfShortcutAt(int keyCode);
+
+    /**
+     * Notifies DisplayPolicy that overlays changed.
+     */
+    void onOverlayChanged();
 }
