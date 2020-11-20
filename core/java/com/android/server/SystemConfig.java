@@ -753,6 +753,14 @@ public class SystemConfig {
                                 String notLowRam = parser.getAttributeValue(null, "notLowRam");
                                 allowed = !"true".equals(notLowRam);
                             }
+                            if (fname.contains("android.hardware.hdmi.cec")) {
+                                allowed = SystemProperties.getBoolean("persist.hdmi_cec.enable", false);
+                                Slog.w(TAG, "MNG " + fname + " allowed=" + allowed);
+                            }
+                            if (fname.contains("android.hardware.bluetooth")) {
+                                allowed = !SystemProperties.getBoolean("persist.disable_bluetooth", true);
+                                Slog.w(TAG, "MNG " + fname + " allowed=" + allowed);
+                            }
                             if (fname == null) {
                                 Slog.w(TAG, "<" + name + "> without name in " + permFile + " at "
                                         + parser.getPositionDescription());
