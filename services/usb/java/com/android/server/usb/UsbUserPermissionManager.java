@@ -36,6 +36,7 @@ import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.Process;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.service.usb.UsbAccessoryPermissionProto;
 import android.service.usb.UsbAccessoryPersistentPermissionProto;
@@ -114,8 +115,12 @@ class UsbUserPermissionManager {
         mContext = context;
         mUser = context.getUser();
         mUsbUserSettingsManager = usbUserSettingsManager;
+        if (SystemProperties.getBoolean("persist.disable_usb_perms", false)) {
+            mDisablePermissionDialogs = true;
+        } else {
         mDisablePermissionDialogs = context.getResources().getBoolean(
                 com.android.internal.R.bool.config_disableUsbPermissionDialogs);
+        }
 
         mPermissionsFile = new AtomicFile(new File(
                 Environment.getUserSystemDirectory(mUser.getIdentifier()),
