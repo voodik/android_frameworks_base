@@ -182,6 +182,11 @@ public class SystemUIApplication extends Application implements
         final int N = services.length;
         for (int i = 0; i < N; i++) {
             String clsName = services[i];
+            if (clsName == "com.android.systemui.statusbar.phone.StatusBar" &&
+                    SystemProperties.getBoolean("persist.kiosk_mode", false)) {
+                Log.i(TAG, "MNG kiosk_mode: true");
+                clsName = "com.android.systemui.statusbar.tv.TvStatusBar";
+            }
             if (DEBUG) Log.d(TAG, "loading: " + clsName);
             log.traceBegin(metricsPrefix + clsName);
             long ti = System.currentTimeMillis();

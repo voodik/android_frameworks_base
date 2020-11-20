@@ -797,6 +797,10 @@ public class KeyguardViewMediator extends SystemUI implements Dumpable {
 
         // Assume keyguard is showing (unless it's disabled) until we know for sure, unless Keyguard
         // is disabled.
+        boolean kiosk = SystemProperties.getBoolean("persist.kiosk_mode", false);
+        if (kiosk) {
+            setShowingLocked(false /* showing */, true /* forceCallbacks */);
+        } else {
         if (mContext.getResources().getBoolean(R.bool.config_enableKeyguardService)) {
             setShowingLocked(!shouldWaitForProvisioning()
                     && !isKeyguardDisabled(
@@ -804,6 +808,7 @@ public class KeyguardViewMediator extends SystemUI implements Dumpable {
         } else {
             // The system's keyguard is disabled or missing.
             setShowingLocked(false /* showing */, true /* forceCallbacks */);
+            }
         }
 
         final ContentResolver cr = mContext.getContentResolver();
@@ -2003,9 +2008,11 @@ public class KeyguardViewMediator extends SystemUI implements Dumpable {
             if (mShowing && !mOccluded) {
                 mKeyguardGoingAwayRunnable.run();
             } else {
+                if (!SystemProperties.getBoolean("persist.kiosk_mode", false)){
                 handleStartKeyguardExitAnimation(
                         SystemClock.uptimeMillis() + mHideAnimation.getStartOffset(),
                         mHideAnimation.getDuration());
+                }
             }
         }
         Trace.endSection();
