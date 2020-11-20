@@ -657,6 +657,12 @@ public class DisplayPolicy {
             mHasNavigationBar = mDisplayContent.supportsSystemDecorations();
         }
 
+        boolean kiosk = SystemProperties.getBoolean("persist.kiosk_mode", false);
+        if (kiosk) {
+            mHasStatusBar = false;
+            mHasNavigationBar = false;
+        }
+
         mRefreshRatePolicy = new RefreshRatePolicy(mService,
                 mDisplayContent.getDisplayInfo(),
                 mService.mHighRefreshRateBlacklist);
