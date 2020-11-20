@@ -196,7 +196,7 @@ public class AudioService extends IAudioService.Stub
     protected static final boolean DEBUG_AP = false;
 
     /** Debug volumes */
-    protected static final boolean DEBUG_VOL = false;
+    protected static final boolean DEBUG_VOL = true;
 
     /** debug calls to devices APIs */
     protected static final boolean DEBUG_DEVICES = false;
@@ -2966,7 +2966,7 @@ public class AudioService extends IAudioService.Stub
         if (streamType == AudioSystem.STREAM_MUSIC) {
             flags = updateFlagsForTvPlatform(flags);
             if (isFullVolumeDevice(device)) {
-                flags &= ~AudioManager.FLAG_SHOW_UI;
+//                flags &= ~AudioManager.FLAG_SHOW_UI;
             }
         }
         mVolumeController.postVolumeChanged(streamType, flags);
@@ -2979,7 +2979,7 @@ public class AudioService extends IAudioService.Stub
         synchronized (mHdmiClientLock) {
             if ((mHdmiTvClient != null && mHdmiSystemAudioSupported && mHdmiCecVolumeControlEnabled)
                     || (mHdmiPlaybackClient != null && mHdmiCecVolumeControlEnabled)) {
-                flags &= ~AudioManager.FLAG_SHOW_UI;
+//                flags &= ~AudioManager.FLAG_SHOW_UI;
             }
         }
         return flags;
