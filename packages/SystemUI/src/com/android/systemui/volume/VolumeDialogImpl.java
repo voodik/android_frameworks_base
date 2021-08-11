@@ -403,8 +403,7 @@ public class VolumeDialogImpl implements VolumeDialog,
                 if (mVolumePanelOnLeft != volumePanelOnLeft) {
                     mVolumePanelOnLeft = volumePanelOnLeft;
                     mHandler.post(() -> {
-                        // Trigger panel rebuild on next show
-                        mConfigChanged = true;
+                        mControllerCallbackH.onConfigurationChanged();
                     });
                 }
             }
@@ -1160,7 +1159,7 @@ public class VolumeDialogImpl implements VolumeDialog,
 
     protected void onStateChangedH(State state) {
         if (D.BUG) Log.d(TAG, "onStateChangedH() state: " + state.toString());
-        if (mState != null && state != null
+        if (mShowing && mState != null && state != null
                 && mState.ringerModeInternal != state.ringerModeInternal
                 && state.ringerModeInternal == AudioManager.RINGER_MODE_VIBRATE) {
             mController.vibrate(VibrationEffect.get(VibrationEffect.EFFECT_HEAVY_CLICK));
