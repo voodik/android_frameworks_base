@@ -1151,6 +1151,14 @@ public class NavigationBar implements View.OnAttachStateChangeListener,
         ButtonDispatcher homeButton = mNavigationBarView.getHomeButton();
         homeButton.setOnTouchListener(this::onHomeTouch);
 
+        ButtonDispatcher volupButton = mNavigationBarView.getVolupButton();
+        volupButton.setOnTouchListener(this::onVolupTouch);
+        volupButton.setLongClickable(false);
+
+        ButtonDispatcher voldownButton = mNavigationBarView.getVoldownButton();
+        voldownButton.setOnTouchListener(this::onVoldownTouch);
+        voldownButton.setLongClickable(false);
+
         reconfigureHomeLongClick();
 
         ButtonDispatcher accessibilityButton = mNavigationBarView.getAccessibilityButton();
@@ -1222,6 +1230,34 @@ public class NavigationBar implements View.OnAttachStateChangeListener,
         keyButtonView.sendEvent(KeyEvent.ACTION_DOWN, KeyEvent.FLAG_LONG_PRESS);
         keyButtonView.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_LONG_CLICKED);
         return true;
+    }
+
+    private boolean onVolupTouch(View v, MotionEvent event) {
+        int action = event.getAction() & MotionEvent.ACTION_MASK;
+        if (action == MotionEvent.ACTION_DOWN) {
+//            mCommandQueue.preloadRecentApps();
+        } else if (action == MotionEvent.ACTION_CANCEL) {
+//            mCommandQueue.cancelPreloadRecentApps();
+        } else if (action == MotionEvent.ACTION_UP) {
+            if (!v.isPressed()) {
+//                mCommandQueue.cancelPreloadRecentApps();
+            }
+        }
+        return false;
+    }
+
+    private boolean onVoldownTouch(View v, MotionEvent event) {
+        int action = event.getAction() & MotionEvent.ACTION_MASK;
+        if (action == MotionEvent.ACTION_DOWN) {
+//            mCommandQueue.preloadRecentApps();
+        } else if (action == MotionEvent.ACTION_CANCEL) {
+//            mCommandQueue.cancelPreloadRecentApps();
+        } else if (action == MotionEvent.ACTION_UP) {
+            if (!v.isPressed()) {
+//                mCommandQueue.cancelPreloadRecentApps();
+            }
+        }
+        return false;
     }
 
     // additional optimization when we have software system buttons - start loading the recent
