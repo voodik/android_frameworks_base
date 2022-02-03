@@ -137,6 +137,8 @@ public class NavigationBarView extends FrameLayout implements
     private KeyButtonDrawable mBackIcon;
     private KeyButtonDrawable mHomeDefaultIcon;
     private KeyButtonDrawable mRecentIcon;
+    private KeyButtonDrawable mVolupIcon;
+    private KeyButtonDrawable mVoldownIcon;
     private KeyButtonDrawable mDockedIcon;
     private Context mLightContext;
     private int mLightIconColor;
@@ -339,6 +341,8 @@ public class NavigationBarView extends FrameLayout implements
         mScreenPinningNotify = new ScreenPinningNotify(mContext);
         mBarTransitions = new NavigationBarTransitions(this, Dependency.get(CommandQueue.class));
 
+        mButtonDispatchers.put(R.id.volume_down, new ButtonDispatcher(R.id.volume_down));
+        mButtonDispatchers.put(R.id.volume_up, new ButtonDispatcher(R.id.volume_up));
         mButtonDispatchers.put(R.id.back, new ButtonDispatcher(R.id.back));
         mButtonDispatchers.put(R.id.home, new ButtonDispatcher(R.id.home));
         mButtonDispatchers.put(R.id.home_handle, new ButtonDispatcher(R.id.home_handle));
@@ -516,6 +520,13 @@ public class NavigationBarView extends FrameLayout implements
         return mButtonDispatchers.get(R.id.home);
     }
 
+    public ButtonDispatcher getVolupButton() {
+        return mButtonDispatchers.get(R.id.volume_up);
+    }
+    public ButtonDispatcher getVoldownButton() {
+        return mButtonDispatchers.get(R.id.volume_down);
+    }
+
     public ButtonDispatcher getImeSwitchButton() {
         return mButtonDispatchers.get(R.id.ime_switcher);
     }
@@ -571,6 +582,8 @@ public class NavigationBarView extends FrameLayout implements
         }
         if (densityChange || dirChange) {
             mRecentIcon = getDrawable(R.drawable.ic_sysbar_recent);
+            mVolupIcon = getDrawable(R.drawable.ic_sysbar_volup);
+            mVoldownIcon = getDrawable(R.drawable.ic_sysbar_voldown);
             getCursorLeftButton().updateIcon(mLightIconColor, mDarkIconColor);
             getCursorRightButton().updateIcon(mLightIconColor, mDarkIconColor);
             mContextualButtonGroup.updateIcons(mLightIconColor, mDarkIconColor);
@@ -745,6 +758,8 @@ public class NavigationBarView extends FrameLayout implements
             orientHomeButton(homeIcon);
         }
         getHomeButton().setImageDrawable(homeIcon);
+        getVolupButton().setImageDrawable(mVolupIcon);
+        getVoldownButton().setImageDrawable(mVoldownIcon);
         getBackButton().setImageDrawable(backIcon);
 
         updateRecentsIcon();
@@ -811,6 +826,8 @@ public class NavigationBarView extends FrameLayout implements
         }
 
         getBackButton().setVisibility(disableBack       ? View.INVISIBLE : View.VISIBLE);
+        getVolupButton().setVisibility(disableHome      ? View.INVISIBLE : View.VISIBLE);
+        getVoldownButton().setVisibility(disableHome      ? View.INVISIBLE : View.VISIBLE);
         getHomeButton().setVisibility(disableHome       ? View.INVISIBLE : View.VISIBLE);
         getRecentsButton().setVisibility(disableRecent  ? View.INVISIBLE : View.VISIBLE);
         getHomeHandle().setVisibility(disableHomeHandle ? View.INVISIBLE : View.VISIBLE);
@@ -1061,6 +1078,8 @@ public class NavigationBarView extends FrameLayout implements
         updateButtonLocation(getBackButton(), inScreenSpace, useNearestRegion);
         updateButtonLocation(getHomeButton(), inScreenSpace, useNearestRegion);
         updateButtonLocation(getRecentsButton(), inScreenSpace, useNearestRegion);
+        updateButtonLocation(getVolupButton(), inScreenSpace, useNearestRegion);
+        updateButtonLocation(getVoldownButton(), inScreenSpace, useNearestRegion);
         updateButtonLocation(getImeSwitchButton(), inScreenSpace, useNearestRegion);
         updateButtonLocation(getAccessibilityButton(), inScreenSpace, useNearestRegion);
         if (includeFloatingButtons && mFloatingRotationButton.isVisible()) {
@@ -1378,6 +1397,8 @@ public class NavigationBarView extends FrameLayout implements
         dumpButton(pw, "home", getHomeButton());
         dumpButton(pw, "handle", getHomeHandle());
         dumpButton(pw, "rcnt", getRecentsButton());
+        dumpButton(pw, "volup", getVolupButton());
+        dumpButton(pw, "voldn", getVoldownButton());
         dumpButton(pw, "rota", getRotateSuggestionButton());
         dumpButton(pw, "a11y", getAccessibilityButton());
         dumpButton(pw, "ime", getImeSwitchButton());
