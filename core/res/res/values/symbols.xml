@@ -551,6 +551,7 @@
   <java-symbol type="string" name="menu_sym_shortcut_label" />
   <java-symbol type="string" name="notification_title" />
   <java-symbol type="string" name="permission_request_notification_with_subtitle" />
+  <java-symbol type="string" name="permission_request_notification_for_app_with_subtitle" />
   <java-symbol type="string" name="prepend_shortcut_label" />
   <java-symbol type="string" name="paste_as_plain_text" />
   <java-symbol type="string" name="replace" />
@@ -1564,6 +1565,7 @@
   <java-symbol type="xml" name="default_zen_mode_config" />
   <java-symbol type="xml" name="sms_7bit_translation_table" />
   <java-symbol type="xml" name="color_extraction" />
+  <java-symbol type="xml" name="tv_launcher_app_white_list" />
 
   <java-symbol type="raw" name="color_fade_vert" />
   <java-symbol type="raw" name="color_fade_frag" />

@@ -28,6 +28,7 @@ import android.util.ArraySet;
 import android.util.Log;
 import com.android.internal.annotations.GuardedBy;
 
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -80,6 +81,12 @@ public class Account implements Parcelable {
         if (TextUtils.isEmpty(type)) {
             throw new IllegalArgumentException("the type must not be empty: " + type);
         }
+        if (name.length() > 200) {
+            throw new IllegalArgumentException("account name is longer than 200 characters");
+        }
+        if (type.length() > 200) {
+            throw new IllegalArgumentException("account type is longer than 200 characters");
+        }
         this.name = name;
         this.type = type;
         this.accessId = accessId;
@@ -88,6 +95,12 @@ public class Account implements Parcelable {
     public Account(Parcel in) {
         this.name = in.readString();
         this.type = in.readString();
+        if (TextUtils.isEmpty(name)) {
+            throw new android.os.BadParcelableException("the name must not be empty: " + name);
+        }
+        if (TextUtils.isEmpty(type)) {
+            throw new android.os.BadParcelableException("the type must not be empty: " + type);
+        }
         this.accessId = in.readString();
         if (accessId != null) {
             synchronized (sAccessedAccounts) {
