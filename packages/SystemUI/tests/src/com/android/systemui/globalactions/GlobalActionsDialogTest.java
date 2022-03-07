@@ -60,6 +60,7 @@ import com.android.keyguard.KeyguardUpdateMonitor;
 import com.android.systemui.SysuiTestCase;
 import com.android.systemui.broadcast.BroadcastDispatcher;
 import com.android.systemui.colorextraction.SysuiColorExtractor;
+import com.android.systemui.controls.dagger.ControlsComponent;
 import com.android.systemui.model.SysUiState;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.GlobalActions;
@@ -69,7 +70,6 @@ import com.android.systemui.statusbar.NotificationShadeWindowController;
 import com.android.systemui.statusbar.phone.StatusBar;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
-import com.android.systemui.telephony.TelephonyListenerManager;
 import com.android.systemui.util.RingerModeLiveData;
 import com.android.systemui.util.RingerModeTracker;
 import com.android.systemui.util.settings.GlobalSettings;
@@ -101,7 +101,6 @@ public class GlobalActionsDialogTest extends SysuiTestCase {
     @Mock private DevicePolicyManager mDevicePolicyManager;
     @Mock private LockPatternUtils mLockPatternUtils;
     @Mock private BroadcastDispatcher mBroadcastDispatcher;
-    @Mock private TelephonyListenerManager mTelephonyListenerManager;
     @Mock private GlobalSettings mGlobalSettings;
     @Mock private Resources mResources;
     @Mock private ConfigurationController mConfigurationController;
@@ -128,6 +127,7 @@ public class GlobalActionsDialogTest extends SysuiTestCase {
     @Mock private SecureSettings mSecureSettings;
     @Mock private StatusBar mStatusBar;
     @Mock private KeyguardUpdateMonitor mKeyguardUpdateMonitor;
+    @Mock private ControlsComponent mControlsComponent;
 
     private TestableLooper mTestableLooper;
 
@@ -148,7 +148,6 @@ public class GlobalActionsDialogTest extends SysuiTestCase {
                 mDevicePolicyManager,
                 mLockPatternUtils,
                 mBroadcastDispatcher,
-                mTelephonyListenerManager,
                 mGlobalSettings,
                 mSecureSettings,
                 null,
@@ -172,7 +171,8 @@ public class GlobalActionsDialogTest extends SysuiTestCase {
                 mHandler,
                 mPackageManager,
                 mStatusBar,
-                mKeyguardUpdateMonitor
+                mKeyguardUpdateMonitor,
+                mControlsComponent
         );
         mGlobalActionsDialog.setZeroDialogPressDelayForTesting();
 

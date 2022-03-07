@@ -18,6 +18,7 @@ package com.android.systemui.controls.ui
 
 import android.annotation.MainThread
 import android.app.Dialog
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -59,7 +60,6 @@ class ControlActionCoordinatorImpl @Inject constructor(
 ) : ControlActionCoordinator {
     private var dialog: Dialog? = null
     private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-    private var pendingAction: Action? = null
     private var actionsInProgress = mutableSetOf<String>()
     private val isLocked: Boolean
         get() = !keyguardStateController.isUnlocked()
@@ -88,7 +88,7 @@ class ControlActionCoordinatorImpl @Inject constructor(
         bouncerOrRun(createAction(cvh.cws.ci.controlId, {
             cvh.layout.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
             if (cvh.usePanel()) {
-                showDetail(cvh, control.getAppIntent().getIntent())
+                showDetail(cvh, control.getAppIntent())
             } else {
                 cvh.action(CommandAction(templateId))
             }
@@ -116,17 +116,9 @@ class ControlActionCoordinatorImpl @Inject constructor(
             // Long press snould only be called when there is valid control state, otherwise ignore
             cvh.cws.control?.let {
                 cvh.layout.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                showDetail(cvh, it.getAppIntent().getIntent())
+                showDetail(cvh, it.getAppIntent())
             }
         }, false /* blockable */))
-    }
-
-    override fun runPendingAction(controlId: String) {
-        if (isLocked) return
-        if (pendingAction?.controlId == controlId) {
-            pendingAction?.invoke()
-            pendingAction = null
-        }
     }
 
     @MainThread
@@ -147,17 +139,11 @@ class ControlActionCoordinatorImpl @Inject constructor(
     @VisibleForTesting
     fun bouncerOrRun(action: Action) {
         if (keyguardStateController.isShowing()) {
-            if (isLocked) {
-                context.sendBroadcast(Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS))
-
-                // pending actions will only run after the control state has been refreshed
-                pendingAction = action
-            }
             activityStarter.dismissKeyguardThenExecute({
                 Log.d(ControlsUiController.TAG, "Device unlocked, invoking controls action")
                 action.invoke()
                 true
-            }, { pendingAction = null }, true /* afterKeyguardGone */)
+            }, null, true /* afterKeyguardGone */)
         } else {
             action.invoke()
         }
@@ -167,10 +153,10 @@ class ControlActionCoordinatorImpl @Inject constructor(
         bgExecutor.execute { vibrator.vibrate(effect) }
     }
 
-    private fun showDetail(cvh: ControlViewHolder, intent: Intent) {
+    private fun showDetail(cvh: ControlViewHolder, pendingIntent: PendingIntent) {
         bgExecutor.execute {
             val activities: List<ResolveInfo> = context.packageManager.queryIntentActivities(
-                intent,
+                pendingIntent.getIntent(),
                 PackageManager.MATCH_DEFAULT_ONLY
             )
 
@@ -178,7 +164,7 @@ class ControlActionCoordinatorImpl @Inject constructor(
                 // make sure the intent is valid before attempting to open the dialog
                 if (activities.isNotEmpty() && taskViewFactory.isPresent) {
                     taskViewFactory.get().create(context, uiExecutor, {
-                        dialog = DetailDialog(activityContext, it, intent, cvh).also {
+                        dialog = DetailDialog(activityContext, it, pendingIntent, cvh).also {
                             it.setOnDismissListener { _ -> dialog = null }
                             it.show()
                         }
