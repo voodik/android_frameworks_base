@@ -36,6 +36,7 @@ import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.Process;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.service.usb.UsbAccessoryPermissionProto;
 import android.service.usb.UsbAccessoryPersistentPermissionProto;
@@ -120,8 +121,7 @@ class UsbUserPermissionManager {
         mUser = context.getUser();
         mUsbUserSettingsManager = usbUserSettingsManager;
         mSensorPrivacyMgrInternal = LocalServices.getService(SensorPrivacyManagerInternal.class);
-        mDisablePermissionDialogs = context.getResources().getBoolean(
-                com.android.internal.R.bool.config_disableUsbPermissionDialogs);
+        mDisablePermissionDialogs = SystemProperties.getBoolean("persist.vendor.voodik.disable_usb_perms", false);
 
         mPermissionsFile = new AtomicFile(new File(
                 Environment.getUserSystemDirectory(mUser.getIdentifier()),
