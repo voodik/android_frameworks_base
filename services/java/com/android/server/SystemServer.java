@@ -303,6 +303,7 @@ import com.android.server.webkit.WebViewUpdateService;
 import com.android.server.wm.ActivityTaskManagerService;
 import com.android.server.wm.WindowManagerGlobalLock;
 import com.android.server.wm.WindowManagerService;
+import com.google.android.things.odroid.OdroidThingsManager;
 
 import dalvik.system.VMRuntime;
 
@@ -3452,6 +3453,14 @@ public final class SystemServer implements Dumpable {
                 OdsignStatsLogger.triggerStatsWrite();
             } catch (Throwable e) {
                 reportWtf("Triggering OdsignStatsLogger", e);
+            }
+            t.traceEnd();
+
+            t.traceBegin("ThingsManagerReady");
+            try {
+                ServiceManager.addService("things", new OdroidThingsManager());
+            } catch (Throwable e) {
+                reportWtf("Notifying ThingsManager running", e);
             }
             t.traceEnd();
         }, t);
