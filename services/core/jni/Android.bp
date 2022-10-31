@@ -78,6 +78,7 @@ cc_library_static {
         "com_android_server_pm_PackageManagerShellCommandDataLoader.cpp",
         "com_android_server_sensor_SensorService.cpp",
         "com_android_server_wm_TaskFpsCallbackController.cpp",
+        "com_google_android_things_odroidThingService.cpp",
         "onload.cpp",
         ":lib_cachedAppOptimizer_native",
         ":lib_freezer_native",
@@ -218,6 +219,7 @@ cc_defaults {
         "android.system.suspend-V1-ndk",
         "server_configurable_flags",
         "service.incremental",
+        "vendor.hardkernel.hardware.odroidthings@1.0",
     ],
 
     static_libs: [
