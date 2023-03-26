@@ -124,6 +124,17 @@ static jobject getListOf(JNIEnv *env, jobject obj, jint mode) {
 
     return resultArray;
 }
+
+static void openGpio(JNIEnv *env, jobject obj, jint pin) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->gpio_open(pin);
+}
+
+static void closeGpio(JNIEnv *env, jobject obj, jint pin) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hal->gpio_close(pin);
+}
+
 static void setGpioDirection(JNIEnv *env, jobject obj, jint pin, jint direction) {
     sp<IOdroidThings> hal = OdroidThingHal::associate();
     hal->setDirection(pin, (direction_t) direction);
@@ -239,6 +250,32 @@ static void closeI2c(JNIEnv *env, jobject obj, jint idx) {
     hal->i2c_close(idx);
 }
 
+static jbyteArray readI2c(JNIEnv *env, jobject obj, jint idx, jint length) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    hidl_vec<uint8_t> buffer;
+    uint8_t *retBuffer = NULL;
+    jbyteArray result;
+
+    Return<void> ret = hal->i2c_read(idx, length,
+        [&] (Result ret, hidl_vec<uint8_t> result) {
+            if (ret == Result::OK) buffer = result;
+        });
+
+    if (ret.isOk()) {
+        retBuffer = new uint8_t[length];
+        for (int i=0; i<length; i++)
+            retBuffer[i] = buffer[i];
+
+        result = env->NewByteArray(length);
+        env->SetByteArrayRegion(result, 0, length, (jbyte *)retBuffer);
+        delete[] retBuffer;
+    } else {
+        result = env->NewByteArray(0);
+    }
+
+    return result;
+}
+
 static jbyteArray readI2cRegBuffer(JNIEnv *env, jobject obj, jint idx, jint reg, jint length) {
     sp<IOdroidThings> hal = OdroidThingHal::associate();
     hidl_vec<uint8_t> buffer;
@@ -265,6 +302,59 @@ static jbyteArray readI2cRegBuffer(JNIEnv *env, jobject obj, jint idx, jint reg,
     return result;
 }
 
+static jshort readI2cRegWord(JNIEnv *env, jobject obj, jint idx, jint reg) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    uint16_t buffer;
+    jshort result;
+
+    Return<void> ret = hal->i2c_readRegWord(idx, reg,
+        [&] (Result ret, uint16_t data) {
+            if (ret == Result::OK) buffer = data;
+        });
+
+    if (ret.isOk()) {
+        result = buffer;
+    } else {
+        result = 0;
+    }
+
+    return result;
+}
+
+static jbyte readI2cRegByte(JNIEnv *env, jobject obj, jint idx, jint reg) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    uint8_t buffer;
+    jbyte result;
+
+    Return<void> ret = hal->i2c_readRegByte(idx, reg,
+        [&] (Result ret, uint8_t data) {
+            if (ret == Result::OK) buffer = data;
+        });
+
+    if (ret.isOk()) {
+        result = buffer;
+    } else {
+        result = 0;
+    }
+
+    return result;
+}
+
+static jboolean writeI2c(JNIEnv *env, jobject obj, jint idx, jbyteArray buffer, jint length) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    Result ret;
+    hidl_vec<uint8_t> writeBuffer(length);
+
+    uint8_t *data = (uint8_t *)env->GetByteArrayElements(buffer, NULL);
+    for(int i=0; i<length; i++)
+        writeBuffer[i] = data[i];
+    env->ReleaseByteArrayElements(buffer, (jbyte *)data, JNI_ABORT);
+
+    ret = hal->i2c_write(idx, writeBuffer, length);
+
+    return (ret == Result::OK)?JNI_TRUE:JNI_FALSE;
+}
+
 static jboolean writeI2cRegBuffer(JNIEnv *env, jobject obj, jint idx, jint reg, jbyteArray buffer, jint length) {
     sp<IOdroidThings> hal = OdroidThingHal::associate();
     Result ret;
@@ -276,6 +366,24 @@ static jboolean writeI2cRegBuffer(JNIEnv *env, jobject obj, jint idx, jint reg, 
     env->ReleaseByteArrayElements(buffer, (jbyte *)data, JNI_ABORT);
 
     ret = hal->i2c_writeRegBuffer(idx, reg, writeBuffer, length);
+
+    return (ret == Result::OK)?JNI_TRUE:JNI_FALSE;
+}
+
+static jboolean writeI2cRegWord(JNIEnv *env, jobject obj, jint idx, jint reg, jshort buffer) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    Result ret;
+
+    ret = hal->i2c_writeRegWord(idx, reg, buffer);
+
+    return (ret == Result::OK)?JNI_TRUE:JNI_FALSE;
+}
+
+static jboolean writeI2cRegByte(JNIEnv *env, jobject obj, jint idx, jint reg, jbyte buffer) {
+    sp<IOdroidThings> hal = OdroidThingHal::associate();
+    Result ret;
+
+    ret = hal->i2c_writeRegByte(idx, reg, buffer);
 
     return (ret == Result::OK)?JNI_TRUE:JNI_FALSE;
 }
@@ -563,6 +671,12 @@ static const JNINativeMethod sManagerMethods[] = {
 };
 
 static const JNINativeMethod sGpioMethods[] = {
+    {"_open",
+        "(I)V",
+        reinterpret_cast<void *>(openGpio)},
+    {"_close",
+        "(I)V",
+        reinterpret_cast<void *>(closeGpio)},
     {"_setGpioDirection",
         "(II)V",
         reinterpret_cast<void *>(setGpioDirection)},
@@ -612,12 +726,30 @@ static const JNINativeMethod sI2cMethods[] = {
     {"_close",
         "(I)V",
         reinterpret_cast<void *>(closeI2c)},
+    {"_read",
+        "(II)[B",
+        reinterpret_cast<void *>(readI2c)},
     {"_readRegBuffer",
         "(III)[B",
         reinterpret_cast<void *>(readI2cRegBuffer)},
+    {"_readRegWord",
+        "(II)S",
+        reinterpret_cast<void *>(readI2cRegWord)},
+    {"_readRegByte",
+        "(II)B",
+        reinterpret_cast<void *>(readI2cRegByte)},
+    {"_write",
+        "(I[BI)Z",
+        reinterpret_cast<void *>(writeI2c)},
     {"_writeRegBuffer",
         "(II[BI)Z",
         reinterpret_cast<void *>(writeI2cRegBuffer)},
+    {"_writeRegWord",
+        "(IIS)Z",
+        reinterpret_cast<void *>(writeI2cRegWord)},
+    {"_writeRegByte",
+        "(IIB)Z",
+        reinterpret_cast<void *>(writeI2cRegByte)},
 };
 
 static const JNINativeMethod sUartMethods[] = {
