@@ -43,6 +43,10 @@ public class PowerManagerWrapper {
         mPowerManager.goToSleep(time, reason, flags);
     }
 
+    void shutdown() {
+        mPowerManager.shutdown(false, PowerManager.SHUTDOWN_USER_REQUESTED, true);
+    }
+
     WakeLockWrapper newWakeLock(int levelAndFlags, String tag) {
         return new DefaultWakeLockWrapper(mPowerManager.newWakeLock(levelAndFlags, tag));
     }

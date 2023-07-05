@@ -3794,7 +3794,11 @@ public class HdmiControlService extends SystemService {
             return;
         }
         mStandbyMessageReceived = true;
-        mPowerManager.goToSleep(SystemClock.uptimeMillis(), PowerManager.GO_TO_SLEEP_REASON_HDMI, 0);
+        if (SystemProperties.getBoolean("persist.hdmi.force_shutdown", false)) {
+            mPowerManager.shutdown();
+        } else {
+            mPowerManager.goToSleep(SystemClock.uptimeMillis(), PowerManager.GO_TO_SLEEP_REASON_HDMI, 0);
+        }
         // PowerManger will send the broadcast Intent.ACTION_SCREEN_OFF and after this gets
         // the intent, the sequence will continue at onStandby().
     }
