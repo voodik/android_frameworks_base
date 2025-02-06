@@ -12090,7 +12090,7 @@ public class AudioService extends IAudioService.Stub
     @GuardedBy("mHdmiClientLock")
     private void updateHdmiCecSinkLocked(boolean hdmiCecSink) {
         if (!hasDeviceVolumeBehavior(AudioSystem.DEVICE_OUT_HDMI)) {
-            if (hdmiCecSink) {
+            if (hdmiCecSink && SystemProperties.getBoolean("persist.vendor.voodik.hdmi_fullvolume", false)) {
                 if (DEBUG_VOL) {
                     Log.d(TAG, "CEC sink: setting HDMI as full vol device");
                 }
