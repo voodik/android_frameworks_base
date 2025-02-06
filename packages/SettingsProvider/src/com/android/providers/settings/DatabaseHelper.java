@@ -1440,9 +1440,13 @@ class DatabaseHelper extends SQLiteOpenHelper {
                             Settings.Global.DEVICE_PROVISIONED, 0);
                     loadSetting(stmt, Settings.Secure.USER_SETUP_COMPLETE,
                             deviceProvisioned);
+                    loadSetting(stmt, Settings.Secure.TV_USER_SETUP_COMPLETE,
+                            deviceProvisioned);
                 } else {
                     // otherwise use the default
                     loadBooleanSetting(stmt, Settings.Secure.USER_SETUP_COMPLETE,
+                            R.bool.def_user_setup_complete);
+                    loadBooleanSetting(stmt, Settings.Secure.TV_USER_SETUP_COMPLETE,
                             R.bool.def_user_setup_complete);
                 }
             } finally {
@@ -2359,6 +2363,9 @@ class DatabaseHelper extends SQLiteOpenHelper {
                     R.fraction.def_accessibility_display_magnification_scale, 1);
 
             loadBooleanSetting(stmt, Settings.Secure.USER_SETUP_COMPLETE,
+                    R.bool.def_user_setup_complete);
+
+            loadBooleanSetting(stmt, Settings.Secure.TV_USER_SETUP_COMPLETE,
                     R.bool.def_user_setup_complete);
 
             loadStringSetting(stmt, Settings.Secure.IMMERSIVE_MODE_CONFIRMATIONS,
