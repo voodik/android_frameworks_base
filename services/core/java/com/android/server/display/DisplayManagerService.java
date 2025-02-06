@@ -2048,9 +2048,10 @@ public final class DisplayManagerService extends SystemService {
     }
 
     private void registerWifiDisplayAdapterLocked() {
-        if (mContext.getResources().getBoolean(
+        if ((mContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_enableWifiDisplay)
-                || SystemProperties.getInt(FORCE_WIFI_DISPLAY_ENABLE, -1) == 1) {
+                || SystemProperties.getInt(FORCE_WIFI_DISPLAY_ENABLE, -1) == 1)
+                && mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_WIFI_DIRECT)) {
             mWifiDisplayAdapter = new WifiDisplayAdapter(
                     mSyncRoot, mContext, mHandler, mDisplayDeviceRepo,
                     mPersistentDataStore, mFlags);
