@@ -2710,16 +2710,16 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         }
     }
 
-    /**
-     * Apply default restrictions that haven't been applied to a given admin yet.
-     */
+    /** Apply default restrictions that haven't been applied to a given admin yet. */
     private void maybeSetDefaultRestrictionsForAdminLocked(int userId, ActiveAdmin admin) {
-        Set<String> defaultRestrictions =
-                UserRestrictionsUtils.getDefaultEnabledForManagedProfiles();
-        if (defaultRestrictions.equals(admin.defaultEnabledRestrictionsAlreadySet)) {
+        Set<String> newDefaultRestrictions = new HashSet(
+            UserRestrictionsUtils.getDefaultEnabledForManagedProfiles());
+        newDefaultRestrictions.removeAll(admin.defaultEnabledRestrictionsAlreadySet);
+        if (newDefaultRestrictions.isEmpty()) {
             return; // The same set of default restrictions has been already applied.
         }
-        for (String restriction : defaultRestrictions) {
+
+        for (String restriction : newDefaultRestrictions) {
             mDevicePolicyEngine.setLocalPolicy(
                     PolicyDefinition.getPolicyDefinitionForUserRestriction(restriction),
                     EnforcingAdmin.createEnterpriseEnforcingAdmin(
@@ -2728,9 +2728,9 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                     new BooleanPolicyValue(true),
                     userId);
         }
-        admin.defaultEnabledRestrictionsAlreadySet.addAll(defaultRestrictions);
+        admin.defaultEnabledRestrictionsAlreadySet.addAll(newDefaultRestrictions);
         Slogf.i(LOG_TAG, "Enabled the following restrictions by default: "
-                + defaultRestrictions);
+                + newDefaultRestrictions);
     }
 
     private void maybeStartSecurityLogMonitorOnActivityManagerReady() {
@@ -10409,7 +10409,8 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                 return false;
             }
 
-            if (isAdb(caller)) {
+            boolean isAdb = isAdb(caller);
+            if (isAdb) {
                 // Log profile owner provisioning was started using adb.
                 MetricsLogger.action(mContext, PROVISIONING_ENTRY_POINT_ADB, LOG_TAG_PROFILE_OWNER);
                 DevicePolicyEventLogger
@@ -10431,6 +10432,17 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
                     maybeSetDefaultRestrictionsForAdminLocked(userHandle, admin);
                     ensureUnknownSourcesRestrictionForProfileOwnerLocked(userHandle, admin,
                             true /* newOwner */);
+                    if (isAdb) {
+                        // DISALLOW_DEBUGGING_FEATURES is being added to newly-created
+                        // work profile by default due to b/382064697 . This would have
+                        //  impacted certain CTS test flows when they interact with the
+                        // work profile via ADB (for example installing an app into the
+                        // work profile). Remove DISALLOW_DEBUGGING_FEATURES here to
+                        // reduce the potential impact.
+                        setLocalUserRestrictionInternal(
+                            EnforcingAdmin.createEnterpriseEnforcingAdmin(who, userHandle),
+                            UserManager.DISALLOW_DEBUGGING_FEATURES, false, userHandle);
+                    }
                 }
                 sendOwnerChangedBroadcast(DevicePolicyManager.ACTION_PROFILE_OWNER_CHANGED,
                         userHandle);
@@ -11347,7 +11359,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         if (mOwners.hasDeviceOwner()) {
             return false;
         }
-        
+
         final ComponentName profileOwner = getProfileOwnerAsUser(userId);
         if (profileOwner == null) {
             return false;
@@ -11356,7 +11368,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
         if (isManagedProfile(userId)) {
             return false;
         }
-        
+
         return true;
     }
     private void enforceCanQueryLockTaskLocked(ComponentName who, String callerPackageName) {
@@ -24524,7 +24536,7 @@ public class DevicePolicyManagerService extends IDevicePolicyManager.Stub {
             }
         });
     }
-    
+
     private void migrateUserControlDisabledPackagesLocked() {
         Binder.withCleanCallingIdentity(() -> {
             List<UserInfo> users = mUserManager.getUsers();
