@@ -63,10 +63,27 @@ abstract class HdmiCecLocalDevice extends HdmiLocalDevice {
     private static final int MAX_HDMI_ACTIVE_SOURCE_HISTORY = 10;
     private static final int MSG_DISABLE_DEVICE_TIMEOUT = 1;
     private static final int MSG_USER_CONTROL_RELEASE_TIMEOUT = 2;
+
+    private static final int VENDOR_ID_LG = 57489;
+    private static final int SL_COMMAND_INIT = 0x01;
+    private static final int SL_COMMAND_ACK_INIT = 0x02;
+    private static final int SL_COMMAND_POWER_ON = 0x03;
+    private static final int SL_COMMAND_CONNECT_REQUEST = 0x04;
+    private static final int SL_COMMAND_SET_DEVICE_MODE = 0x05;
+    private static final int SL_COMMAND_REQUEST_RECONNECT = 0x0b;
+    private static final int SL_COMMAND_REQUEST_POWER_STATUS = 0xa0;
+    private static final int SL_COMMAND_TYPE_HDDRECORDER = 0x05;
+    private static final int CEC_DECK_INFO_OTHER_STATUS_LG = 0x20;
+    private static final int CEC_STATUS_REQUEST_ON = 1;
+    private static final int CEC_STATUS_REQUEST_ONCE = 3;
+
+    private static final int VENDOR_ID_SAMSUNG = 240;
+
     // Within the timer, a received <User Control Pressed> will start "Press and Hold" behavior.
     // When it expires, we can assume <User Control Release> is received.
     private static final int FOLLOWER_SAFETY_TIMEOUT = 550;
 
+    protected int mDeviceVendorId = 0;
     protected int mPreferredAddress;
     @GuardedBy("mLock")
     private HdmiDeviceInfo mDeviceInfo;
@@ -381,6 +398,10 @@ abstract class HdmiCecLocalDevice extends HdmiLocalDevice {
                 return handleMenuRequest(message);
             case Constants.MESSAGE_MENU_STATUS:
                 return handleMenuStatus(message);
+            case Constants.MESSAGE_DEVICE_VENDOR_ID:
+                return handleDevVendorId(message);
+            case Constants.MESSAGE_GIVE_DECK_STATUS:
+                return HandleGiveDeckStatus(message);
             case Constants.MESSAGE_VENDOR_COMMAND:
                 return handleVendorCommand(message);
             case Constants.MESSAGE_VENDOR_COMMAND_WITH_ID:
@@ -909,8 +930,52 @@ abstract class HdmiCecLocalDevice extends HdmiLocalDevice {
     }
 
     @Constants.HandleMessageResult
+    protected int handleDevVendorId(HdmiCecMessage message) {
+
+        int src = message.getSource();
+        if (src != mDeviceInfo.getLogicalAddress() && src == Constants.ADDR_TV &&
+                message.getDestination() == Constants.ADDR_BROADCAST) {
+        byte[] params = message.getParams();
+        int vendorId = HdmiUtils.threeBytesToInt(params);
+        Slog.i(TAG, "MNG Connected device  = " + vendorId);
+            if (vendorId > 0){
+            mDeviceVendorId = vendorId;
+            return Constants.HANDLED;
+            }
+	}
+        return Constants.NOT_HANDLED;
+    }
+
+    @Constants.HandleMessageResult
     protected int handleVendorCommand(HdmiCecMessage message) {
-        if (!mService.invokeVendorCommandListenersOnReceived(
+        int logicalAddress = message.getSource();
+        HdmiDeviceInfo cecDeviceInfo = mService.getHdmiCecNetwork().getCecDeviceInfo(logicalAddress);
+        int vendorId = cecDeviceInfo.getVendorId();
+        Slog.i(TAG, "MNG OLD Received CEC vendor comand vid = " + mDeviceVendorId + " src = " + message.getSource() + " dst = " + message.getDestination());
+        Slog.i(TAG, "MNG Received CEC vendor comand vid = " + vendorId + " src = " + logicalAddress + " dst = " + message.getDestination() + " name = " + cecDeviceInfo.getDisplayName());
+
+        byte[] params = message.getParams();
+
+        if (mDeviceVendorId == VENDOR_ID_LG && message.getSource() == Constants.ADDR_TV && message.getDestination() == mDeviceInfo.getLogicalAddress()){
+            byte[] ackparams = new byte[2];
+            switch (params[0]) {
+                 case SL_COMMAND_INIT:
+                     ackparams[0] = (byte) SL_COMMAND_ACK_INIT;
+                     ackparams[1] = (byte) SL_COMMAND_TYPE_HDDRECORDER;
+                     mService.sendCecCommand(HdmiCecMessageBuilder.buildVendorCommand(
+                     mDeviceInfo.getLogicalAddress(), message.getSource(), ackparams));
+                     return Constants.HANDLED;
+                 case SL_COMMAND_CONNECT_REQUEST:
+                     ackparams[0] = (byte) SL_COMMAND_SET_DEVICE_MODE;
+                     ackparams[1] = (byte) HdmiDeviceInfo.DEVICE_RECORDER;
+                     mService.sendCecCommand(HdmiCecMessageBuilder.buildVendorCommand(
+                     mDeviceInfo.getLogicalAddress(), message.getSource(), ackparams));
+                     return Constants.HANDLED;
+                 default:
+                     break;
+            }
+            return Constants.HANDLED;
+        } else if (!mService.invokeVendorCommandListenersOnReceived(
                 mDeviceType,
                 message.getSource(),
                 message.getDestination(),
@@ -924,9 +989,62 @@ abstract class HdmiCecLocalDevice extends HdmiLocalDevice {
     }
 
     @Constants.HandleMessageResult
+    protected int HandleGiveDeckStatus(HdmiCecMessage message) {
+        int logicalAddress = message.getSource();
+        HdmiDeviceInfo cecDeviceInfo = mService.getHdmiCecNetwork().getCecDeviceInfo(logicalAddress);
+        int vendorId = cecDeviceInfo.getVendorId();
+        Slog.i(TAG, "MNG OLD Received CEC HandleGiveDeckStatus comand vid = " + mDeviceVendorId + " src = " + message.getSource() + " dst = " + message.getDestination());
+        Slog.i(TAG, "MNG Received CEC HandleGiveDeckStatus comand vid = " + vendorId + " src = " + logicalAddress + " dst = " + message.getDestination() + " name = " + cecDeviceInfo.getDisplayName());
+
+
+        byte[] params = message.getParams();
+
+      if (mDeviceVendorId == VENDOR_ID_LG && message.getSource() == Constants.ADDR_TV && message.getDestination() == mDeviceInfo.getLogicalAddress()){
+          byte[] ackparams = new byte[1];
+            switch (params[0]) {
+                 case CEC_STATUS_REQUEST_ON:
+                     ackparams[0] = (byte) CEC_DECK_INFO_OTHER_STATUS_LG;
+                     mService.sendCecCommand(HdmiCecMessageBuilder.buildDeckStatusCommand(
+                     mDeviceInfo.getLogicalAddress(), message.getSource(), ackparams));
+                     return Constants.HANDLED;
+                 case CEC_STATUS_REQUEST_ONCE:
+                     ackparams[0] = (byte) CEC_DECK_INFO_OTHER_STATUS_LG;
+                     mService.sendCecCommand(HdmiCecMessageBuilder.buildDeckStatusCommand(
+                     mDeviceInfo.getLogicalAddress(), message.getSource(), ackparams));
+                     return Constants.HANDLED;
+                 default:
+                     break;
+            }
+        return Constants.NOT_HANDLED;
+      }
+    return Constants.NOT_HANDLED;
+    }
+
+    @Constants.HandleMessageResult
     protected int handleVendorCommandWithId(HdmiCecMessage message) {
         byte[] params = message.getParams();
         int vendorId = HdmiUtils.threeBytesToInt(params);
+        int logicalAddress = message.getSource();
+        HdmiDeviceInfo cecDeviceInfo = mService.getHdmiCecNetwork().getCecDeviceInfo(logicalAddress);
+
+        if (vendorId == VENDOR_ID_SAMSUNG && logicalAddress == Constants.ADDR_TV &&
+                 message.getDestination() == mDeviceInfo.getLogicalAddress() && params[3] == 0x23) {
+
+            Slog.i(TAG, "MNG Received SAMS CEC handleVendorCommandWithId comand vid = " + vendorId + " src = " +
+                  logicalAddress + " dst = " + message.getDestination() + " name = " + cecDeviceInfo.getDisplayName() + " params = " + byteArrayToHex(params));
+
+            byte[] rplparams = new byte[3];
+            rplparams[0] = (byte) 0x24;
+            rplparams[1] = (byte) 0x00;
+            rplparams[2] = (byte) 0x80;
+
+            mService.sendCecCommand(HdmiCecMessageBuilder.buildVendorCommandWithId(
+                    mDeviceInfo.getLogicalAddress(), logicalAddress,
+                    vendorId, rplparams));
+
+            return Constants.HANDLED;
+        }
+
         if (!mService.invokeVendorCommandListenersOnReceived(
                 mDeviceType, message.getSource(), message.getDestination(), params, true)) {
             if (message.getDestination() == Constants.ADDR_BROADCAST
@@ -1522,6 +1640,18 @@ abstract class HdmiCecLocalDevice extends HdmiLocalDevice {
             }
         }
         return finalMask | myPhysicalAddress;
+    }
+
+    private static byte[] intToSingleByteArray(int value) {
+        return new byte[] {
+                (byte) (value & 0xFF) };
+    }
+
+    private static String byteArrayToHex(byte[] a) {
+        StringBuilder sb = new StringBuilder(a.length * 2);
+        for(byte b: a)
+           sb.append(String.format("%02x", b));
+        return sb.toString();
     }
 
     private static final class ActiveSourceHistoryRecord extends HdmiCecController.Dumpable {

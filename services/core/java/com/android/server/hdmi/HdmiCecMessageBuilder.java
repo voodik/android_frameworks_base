@@ -576,6 +576,9 @@ public class HdmiCecMessageBuilder {
         return HdmiCecMessage.build(src, dest, Constants.MESSAGE_VENDOR_COMMAND, params);
     }
 
+    static HdmiCecMessage buildDeckStatusCommand(int src, int dest, byte[] params) {
+        return HdmiCecMessage.build(src, dest, Constants.MESSAGE_DECK_STATUS, params);
+    }
     /**
      * Build &lt;Vendor Command With ID&gt; command.
      *
